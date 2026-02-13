@@ -1,24 +1,43 @@
 package com.octa.backendportfolio.service;
 
 import com.octa.backendportfolio.dto.ContactRequest;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import lombok.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private String apiKey;
 
     public void sendEmail(ContactRequest request) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("octavalenzuela0@gmail.com");
-        message.setTo("octavalenzuela0@gmail.com"); // Te llega a vos mismo
-        message.setSubject("Nuevo contacto del Portfolio: " + request.getAsunto());
-        message.setText("De: " + request.getNombre() + " " + request.getApellido() + "\n\n" + request.getMensaje());
+        RestTemplate restTemplate = new RestTemplate();
 
-        mailSender.send(message);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("from", "onboarding@resend.dev");
+        body.put("to", "octavalenzuela0@gmail.com");
+        body.put("subject", "Nuevo contacto: " + request.getAsunto());
+        body.put("html", "<strong>De:</strong> " + request.getNombre() + " " + request.getApellido() + "<br><br>" + request.getMensaje());
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+        try {
+            restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
+        } catch (Exception e) {
+            System.err.println("Error enviando por API: " + e.getMessage());
+            throw e;
+        }
     }
 }
